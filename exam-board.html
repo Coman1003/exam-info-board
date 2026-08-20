@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考場資訊看板系統</title>
+    <style>
+        /* ========== 全局樣式 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --pink: #FFB6D9;
+            --mint: #B2F5D0;
+            --sky: #A8E6F1;
+            --lavender: #D4C5F9;
+            --light-bg: #FAFAFA;
+            --border: #E8E8E8;
+            --text: #333333;
+            --text-light: #999999;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* ========== 主容器 ========== */
+        .main {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* ========== 頭部（時間 + 編輯按鈕）========== */
+        .header {
+            background: linear-gradient(135deg, var(--pink) 0%, #FFD4E8 100%);
+            border-radius: 16px;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+
+        .clock {
+            font-size: 28px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-edit {
+            background-color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            color: var(--text);
+        }
+
+        .btn-edit:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-edit:active {
+            transform: scale(0.98);
+        }
+
+        /* ========== 當前科目區域 ========== */
+        .current-subject {
+            background: linear-gradient(135deg, var(--lavender) 0%, #E8D4F5 100%);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .subject-label {
+            font-size: 18px;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .subject-name {
+            font-size: 52px;
+            font-weight: 700;
+            color: white;
+            margin: 10px 0;
+            animation: pulse 2s infinite;
+        }
+
+        .subject-time {
+            font-size: 20px;
+            color: rgba(255,255,255,0.95);
+            font-weight: 500;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.75; }
+        }
+
+        /* ========== 內容區域（���程表 + 人數統計）========== */
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            flex: 1;
+        }
+
+        /* ========== 考程表 ========== */
+        .schedule-table {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            overflow-y: auto;
+        }
+
+        .schedule-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .schedule-item {
+            padding: 15px 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .schedule-item.ongoing {
+            background-color: var(--pink);
+            color: white;
+            font-weight: 700;
+            box-shadow: var(--shadow);
+        }
+
+        .schedule-item.completed {
+            background-color: var(--border);
+            color: var(--text-light);
+            text-decoration: line-through;
+        }
+
+        .schedule-item.pending {
+            background-color: #F5F5F5;
+            color: var(--text-light);
+        }
+
+        .schedule-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .schedule-name {
+            font-size: 18px;
+        }
+
+        .schedule-time {
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .schedule-status {
+            font-size: 16px;
+        }
+
+        /* ========== 人數統計面板 ========== */
+        .statistics-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border-left: 6px solid var(--pink);
+        }
+
+        .stat-card:nth-child(1) {
+            border-left-color: var(--pink);
+            background: linear-gradient(135deg, rgba(255,182,217,0.1) 0%, rgba(255,182,217,0.05) 100%);
+        }
+
+        .stat-card:nth-child(2) {
+            border-left-color: var(--mint);
+            background: linear-gradient(135deg, rgba(178,245,208,0.1) 0%, rgba(178,245,208,0.05) 100%);
+        }
+
+        .stat-card:nth-child(3) {
+            border-left-color: var(--sky);
+            background: linear-gradient(135deg, rgba(168,230,241,0.1) 0%, rgba(168,230,241,0.05) 100%);
+        }
+
+        .stat-card:nth-child(4) {
+            border-left-color: var(--lavender);
+            background: linear-gradient(135deg, rgba(212,197,249,0.1) 0%, rgba(212,197,249,0.05) 100%);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .stat-number {
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--text);
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        /* ========== 編輯模態 ========== */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-md);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            transform: scale(1.2);
+            color: var(--text);
+        }
+
+        .modal-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ========== 表格編輯 ========== */
+        .subjects-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .subjects-table thead {
+            background-color: var(--light-bg);
+        }
+
+        .subjects-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .subjects-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .subjects-table input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .subjects-table input:focus {
+            outline: none;
+            border-color: var(--pink);
+            box-shadow: 0 0 0 3px rgba(255,182,217,0.2);
+        }
+
+        .btn-delete {
+            background-color: #FFE8F0;
+            border: none;
+            color: #FF6BA8;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-delete:hover {
+            background-color: #FFD4E8;
+            transform: scale(1.1);
+        }
+
+        /* ========== 表單控制 ========== */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--pink);
+            box-shadow: 0 0 0 4px rgba(255,182,217,0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .validation-message {
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .validation-message.error {
+            background-color: #FFE8E8;
+            color: #FF6B6B;
+            display: block;
+            border-left: 4px solid #FF6B6B;
+        }
+
+        .validation-message.success {
+            background-color: #E8F8F0;
+            color: #2D8B6B;
+            display: block;
+            border-left: 4px solid #2D8B6B;
+        }
+
+        .select-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .select-input:focus {
+            outline: none;
+            border-color: var(--pink);
+            box-shadow: 0 0 0 4px rgba(255,182,217,0.2);
+        }
+
+        /* ========== 按鈕區域 ========== */
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            border-top: 2px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--pink) 0%, #FFD4E8 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background-color: var(--light-bg);
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border);
+        }
+
+        .btn-add {
+            background-color: var(--mint);
+            color: white;
+            padding: 10px 16px;
+            font-size: 14px;
+            width: fit-content;
+        }
+
+        .btn-add:hover {
+            background-color: #99E8C2;
+        }
+
+        /* ========== 響應式設計 ========== */
+        @media (max-width: 1200px) {
+            .content {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .statistics-panel {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .modal-content {
+                width: 95%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                padding: 15px;
+                gap: 15px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .clock {
+                font-size: 22px;
+            }
+
+            .current-subject {
+                padding: 20px;
+            }
+
+            .subject-name {
+                font-size: 36px;
+            }
+
+            .subject-time {
+                font-size: 16px;
+            }
+
+            .schedule-table {
+                padding: 15px;
+            }
+
+            .stat-card {
+                padding: 15px;
+            }
+
+            .stat-number {
+                font-size: 32px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .subjects-table th,
+            .subjects-table td {
+                padding: 8px;
+                font-size: 12px;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+
+            .modal-title {
+                font-size: 20px;
+            }
+
+            .section-title {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .statistics-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-footer {
+                flex-direction: column-reverse;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* ========== 隱藏類 ========== */
+        .hidden {
+            display: none !important;
+        }
+
+        /* ========== 滾動條美化 ========== */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--light-bg);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <!-- 頭部：時間 + 編輯按鈕 -->
+        <div class="header">
+            <div class="clock" id="clock">--:--:--</div>
+            <button class="btn-edit" id="editBtn">⚙️ 編輯</button>
+        </div>
+
+        <!-- 當前科目 -->
+        <div class="current-subject">
+            <div class="subject-label">📚 現在考試科目</div>
+            <div class="subject-name" id="subjectName">等待考試</div>
+            <div class="subject-time" id="subjectTime">--:-- ~ --:--</div>
+        </div>
+
+        <!-- 考程表 + 人數統計 -->
+        <div class="content">
+            <!-- 考程表 -->
+            <div class="schedule-table">
+                <div class="schedule-title">📅 考程表</div>
+                <div class="schedule-list" id="scheduleList"></div>
+            </div>
+
+            <!-- 人數統計 -->
+            <div class="statistics-panel" id="statisticsPanel"></div>
+        </div>
+    </div>
+
+    <!-- 編輯模態 -->
+    <div class="modal hidden" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">編輯考試資訊</div>
+                <button class="modal-close" id="closeModal">✕</button>
+            </div>
+
+            <!-- 科目設定 -->
+            <div class="modal-section">
+                <div class="section-title">📚 科目設定</div>
+                <table class="subjects-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">科目名稱</th>
+                            <th style="width: 25%;">開始時間</th>
+                            <th style="width: 25%;">結束時間</th>
+                            <th style="width: 10%;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subjectsTableBody"></tbody>
+                </table>
+                <button class="btn btn-add" id="addSubjectBtn">+ 新增科目</button>
+            </div>
+
+            <!-- 人數統計 -->
+            <div class="modal-section">
+                <div class="section-title">📊 人數統計</div>
+                <div class="form-group">
+                    <label class="form-label">全班總人數</label>
+                    <input type="number" class="form-input" id="totalStudents" min="0">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">教室人數</label>
+                        <input type="number" class="form-input" id="classroomStudents" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">缺席人數</label>
+                        <input type="number" class="form-input" id="absentStudents" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">抽離人數</label>
+                    <input type="number" class="form-input" id="withdrawnStudents" min="0">
+                </div>
+                <div class="validation-message" id="validationMsg"></div>
+            </div>
+
+            <!-- 當前科目 -->
+            <div class="modal-section">
+                <div class="section-title">🎯 當前科目</div>
+                <div class="form-group">
+                    <label class="form-label">選擇現在進行的科目</label>
+                    <select class="select-input" id="currentSubjectSelect"></select>
+                </div>
+            </div>
+
+            <!-- 按鈕區域 -->
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelBtn">取消</button>
+                <button class="btn btn-primary" id="saveBtn">💾 保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 數據管理 ==========
+        const Storage = {
+            KEY: 'examData',
+            
+            DEFAULT_DATA: {
+                subjects: [
+                    { id: 1, name: '數學', startTime: '09:00', endTime: '10:30' },
+                    { id: 2, name: '英文', startTime: '10:45', endTime: '12:00' },
+                    { id: 3, name: '國文', startTime: '13:00', endTime: '14:30' }
+                ],
+                statistics: {
+                    totalStudents: 45,
+                    classroomStudents: 42,
+                    absentStudents: 2,
+                    withdrawnStudents: 1
+                },
+                currentSubjectId: 1
+            },
+
+            getData() {
+                const data = localStorage.getItem(this.KEY);
+                return data ? JSON.parse(data) : this.DEFAULT_DATA;
+            },
+
+            saveData(data) {
+                localStorage.setItem(this.KEY, JSON.stringify(data));
+            }
+        };
+
+        // ========== 時間工具 ==========
+        const TimeUtils = {
+            getCurrentTime() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const date = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                return `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+            },
+
+            getCurrentHHMM() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            },
+
+            getSubjectStatus(startTime, endTime) {
+                const now = this.getCurrentHHMM();
+                if (now > endTime) return 'completed';
+                if (now >= startTime && now <= endTime) return 'ongoing';
+                return 'pending';
+            }
+        };
+
+        // ========== 驗證工具 ==========
+        const Validator = {
+            validateStatistics(stats) {
+                const total = stats.classroomStudents + stats.absentStudents + stats.withdrawnStudents;
+                return total === stats.totalStudents;
+            },
+
+            validateSubjects(subjects) {
+                for (let subject of subjects) {
+                    if (!subject.name.trim()) return false;
+                    if (!subject.startTime || !subject.endTime) return false;
+                    if (subject.startTime >= subject.endTime) return false;
+                }
+                return true;
+            }
+        };
+
+        // ========== UI 更新 ==========
+        const UI = {
+            updateClock() {
+                document.getElementById('clock').textContent = TimeUtils.getCurrentTime();
+            },
+
+            updateCurrentSubject(data) {
+                const subject = data.subjects.find(s => s.id === data.currentSubjectId);
+                
+                if (!subject) {
+                    document.getElementById('subjectName').textContent = '等待考試';
+                    document.getElementById('subjectTime').textContent = '--:-- ~ --:--';
+                    return;
+                }
+
+                const status = TimeUtils.getSubjectStatus(subject.startTime, subject.endTime);
+                
+                if (status === 'completed' || status === 'pending') {
+                    // 如果當前科目已考完或未開始，自動查找進行中的科目
+                    const ongoingSubject = data.subjects.find(s => 
+                        TimeUtils.getSubjectStatus(s.startTime, s.endTime) === 'ongoing'
+                    );
+                    
+                    if (ongoingSubject) {
+                        document.getElementById('subjectName').textContent = ongoingSubject.name;
+                        document.getElementById('subjectTime').textContent = `${ongoingSubject.startTime} ~ ${ongoingSubject.endTime}`;
+                    } else {
+                        document.getElementById('subjectName').textContent = '等待考試';
+                        document.getElementById('subjectTime').textContent = '--:-- ~ --:--';
+                    }
+                } else {
+                    document.getElementById('subjectName').textContent = subject.name;
+                    document.getElementById('subjectTime').textContent = `${subject.startTime} ~ ${subject.endTime}`;
+                }
+            },
+
+            renderScheduleTable(subjects) {
+                const list = document.getElementById('scheduleList');
+                list.innerHTML = '';
+
+                subjects.forEach(subject => {
+                    const status = TimeUtils.getSubjectStatus(subject.startTime, subject.endTime);
+                    const statusText = status === 'completed' ? '✕' : status === 'ongoing' ? '✓' : '⏰';
+                    
+                    const item = document.createElement('div');
+                    item.className = `schedule-item ${status}`;
+                    item.innerHTML = `
+                        <div class="schedule-info">
+                            <span class="schedule-status">${statusText}</span>
+                            <span class="schedule-name">${subject.name}</span>
+                            <span class="schedule-time">${subject.startTime} - ${subject.endTime}</span>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            },
+
+            renderStatistics(stats) {
+                const panel = document.getElementById('statisticsPanel');
+                panel.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-number">${stats.totalStudents}</div>
+                        <div class="stat-label">全班總人數</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏫</div>
+                        <div class="stat-number">${stats.classroomStudents}</div>
+                        <div class="stat-label">教室人數</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-number">${stats.absentStudents}</div>
+                        <div class="stat-label">缺席人數</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔄</div>
+                        <div class="stat-number">${stats.withdrawnStudents}</div>
+                        <div class="stat-label">抽離人數</div>
+                    </div>
+                `;
+            },
+
+            renderEditForm(data) {
+                // 渲染科目表格
+                const tbody = document.getElementById('subjectsTableBody');
+                tbody.innerHTML = '';
+                data.subjects.forEach((subject, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><input type="text" class="subject-name-input" value="${subject.name}" data-id="${subject.id}"></td>
+                        <td><input type="time" class="subject-start-input" value="${subject.startTime}" data-id="${subject.id}"></td>
+                        <td><input type="time" class="subject-end-input" value="${subject.endTime}" data-id="${subject.id}"></td>
+                        <td><button class="btn-delete" data-id="${subject.id}">🗑️</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // 綁定刪除按鈕
+                document.querySelectorAll('.btn-delete').forEach(btn => {
+                    btn.addEventListener('click', () => App.deleteSubject(parseInt(btn.dataset.id)));
+                });
+
+                // 填充統計數據
+                document.getElementById('totalStudents').value = data.statistics.totalStudents;
+                document.getElementById('classroomStudents').value = data.statistics.classroomStudents;
+                document.getElementById('absentStudents').value = data.statistics.absentStudents;
+                document.getElementById('withdrawnStudents').value = data.statistics.withdrawnStudents;
+
+                // 填充當前科目
+                const select = document.getElementById('currentSubjectSelect');
+                select.innerHTML = '';
+                data.subjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.id;
+                    option.textContent = `${subject.name} (${subject.startTime} - ${subject.endTime})`;
+                    select.appendChild(option);
+                });
+                select.value = data.currentSubjectId;
+
+                // 驗證統計數據
+                this.validateStatisticsDisplay();
+            },
+
+            validateStatisticsDisplay() {
+                const total = parseInt(document.getElementById('totalStudents').value) || 0;
+                const classroom = parseInt(document.getElementById('classroomStudents').value) || 0;
+                const absent = parseInt(document.getElementById('absentStudents').value) || 0;
+                const withdrawn = parseInt(document.getElementById('withdrawnStudents').value) || 0;
+
+                const msg = document.getElementById('validationMsg');
+                const sum = classroom + absent + withdrawn;
+
+                if (sum === total && total > 0) {
+                    msg.textContent = `✓ 驗證通過：${classroom} + ${absent} + ${withdrawn} = ${total}`;
+                    msg.className = 'validation-message success';
+                } else if (sum !== total) {
+                    msg.textContent = `✗ 人數不符：${classroom} + ${absent} + ${withdrawn} = ${sum} ≠ ${total}`;
+                    msg.className = 'validation-message error';
+                } else {
+                    msg.className = 'validation-message';
+                }
+            }
+        };
+
+        // ========== 應用邏輯 ==========
+        const App = {
+            data: null,
+
+            init() {
+                this.data = Storage.getData();
+                this.render();
+                this.attachEventListeners();
+                
+                // 每秒更新時間
+                setInterval(() => this.updateDisplay(), 1000);
+                
+                // 人數驗證監聽
+                ['totalStudents', 'classroomStudents', 'absentStudents', 'withdrawnStudents'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => UI.validateStatisticsDisplay());
+                    document.getElementById(id).addEventListener('input', () => UI.validateStatisticsDisplay());
+                });
+            },
+
+            render() {
+                UI.updateClock();
+                UI.updateCurrentSubject(this.data);
+                UI.renderScheduleTable(this.data.subjects);
+                UI.renderStatistics(this.data.statistics);
+            },
+
+            updateDisplay() {
+                UI.updateClock();
+                UI.updateCurrentSubject(this.data);
+                UI.renderScheduleTable(this.data.subjects);
+            },
+
+            attachEventListeners() {
+                // 編輯按鈕
+                document.getElementById('editBtn').addEventListener('click', () => this.openEditModal());
+                document.getElementById('closeModal').addEventListener('click', () => this.closeEditModal());
+                document.getElementById('cancelBtn').addEventListener('click', () => this.closeEditModal());
+                document.getElementById('editModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'editModal') this.closeEditModal();
+                });
+
+                // 保存按鈕
+                document.getElementById('saveBtn').addEventListener('click', () => this.saveData());
+
+                // 新增科目按鈕
+                document.getElementById('addSubjectBtn').addEventListener('click', () => this.addSubject());
+            },
+
+            openEditModal() {
+                UI.renderEditForm(this.data);
+                document.getElementById('editModal').classList.remove('hidden');
+            },
+
+            closeEditModal() {
+                document.getElementById('editModal').classList.add('hidden');
+            },
+
+            addSubject() {
+                const newId = Math.max(...this.data.subjects.map(s => s.id), 0) + 1;
+                this.data.subjects.push({
+                    id: newId,
+                    name: '新科目',
+                    startTime: '09:00',
+                    endTime: '10:00'
+                });
+                UI.renderEditForm(this.data);
+            },
+
+            deleteSubject(id) {
+                if (this.data.subjects.length <= 1) {
+                    alert('至少需要保留一個科目！');
+                    return;
+                }
+                this.data.subjects = this.data.subjects.filter(s => s.id !== id);
+                
+                if (this.data.currentSubjectId === id) {
+                    this.data.currentSubjectId = this.data.subjects[0].id;
+                }
+                
+                UI.renderEditForm(this.data);
+            },
+
+            saveData() {
+                // 收集表格數據
+                this.data.subjects = [];
+                document.querySelectorAll('#subjectsTableBody tr').forEach((row, index) => {
+                    const name = row.querySelector('.subject-name-input').value.trim();
+                    const startTime = row.querySelector('.subject-start-input').value;
+                    const endTime = row.querySelector('.subject-end-input').value;
+
+                    if (!name || !startTime || !endTime) {
+                        alert('請填寫所有科目資訊！');
+                        throw new Error('Invalid input');
+                    }
+
+                    if (startTime >= endTime) {
+                        alert('開始時間必須早於結束時間！');
+                        throw new Error('Invalid time range');
+                    }
+
+                    this.data.subjects.push({
+                        id: index + 1,
+                        name,
+                        startTime,
+                        endTime
+                    });
+                });
+
+                // 收集統計數據
+                const totalStudents = parseInt(document.getElementById('totalStudents').value) || 0;
+                const classroomStudents = parseInt(document.getElementById('classroomStudents').value) || 0;
+                const absentStudents = parseInt(document.getElementById('absentStudents').value) || 0;
+                const withdrawnStudents = parseInt(document.getElementById('withdrawnStudents').value) || 0;
+
+                if (totalStudents <= 0) {
+                    alert('全班總人數必須大於 0！');
+                    return;
+                }
+
+                const sum = classroomStudents + absentStudents + withdrawnStudents;
+                if (sum !== totalStudents) {
+                    alert('人數不符！請檢查統計數據。');
+                    return;
+                }
+
+                this.data.statistics = {
+                    totalStudents,
+                    classroomStudents,
+                    absentStudents,
+                    withdrawnStudents
+                };
+
+                // 保存當前科目
+                this.data.currentSubjectId = parseInt(document.getElementById('currentSubjectSelect').value);
+
+                // 保存到本地存儲
+                Storage.saveData(this.data);
+
+                // 更新顯示
+                this.render();
+                this.closeEditModal();
+                alert('✓ 數據已保存！');
+            }
+        };
+
+        // 初始化應用
+        window.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>
