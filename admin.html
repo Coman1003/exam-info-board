@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>考場資訊看板 - 管理頁</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body data-page="admin">
+    <div class="page">
+      <main class="admin-layout">
+        <section class="panel admin-editor" data-role="admin-editor">
+          <h2>🛠️ 管理頁面</h2>
+
+          <section>
+            <h3>1. 考程表編輯</h3>
+            <div class="table-wrap">
+              <table class="editor-table">
+                <thead>
+                  <tr>
+                    <th>選取</th>
+                    <th>科目名稱</th>
+                    <th>開始時間</th>
+                    <th>結束時間</th>
+                  </tr>
+                </thead>
+                <tbody data-editor="subject-rows"></tbody>
+              </table>
+            </div>
+            <div class="editor-actions">
+              <button class="btn btn-primary" type="button" data-action="add-row">+ 新增行</button>
+              <button class="btn btn-secondary" type="button" data-action="remove-rows">🗑️ 刪除選中行</button>
+            </div>
+          </section>
+
+          <section>
+            <h3>2. 人數設定</h3>
+            <div class="stats-form">
+              <label>全班總人數 <input type="number" name="totalStudents" min="0" /></label>
+              <label>教室人數 <input type="number" name="classroomStudents" min="0" /></label>
+              <label>缺席人數 <input type="number" name="absentStudents" min="0" /></label>
+              <label>抽離人數 <input type="number" name="withdrawnStudents" min="0" /></label>
+            </div>
+            <p class="warning" data-role="validation-warning" hidden>⚠️ 教室 + 缺席 + 抽離 必須等於全班總人數</p>
+          </section>
+
+          <section>
+            <h3>3. 當前科目選擇</h3>
+            <select data-editor="current-subject"></select>
+            <div class="subject-preview" data-role="subject-preview"></div>
+          </section>
+
+          <div class="editor-footer">
+            <a class="btn btn-secondary" href="./index.html">返回看板</a>
+            <button class="btn btn-primary" type="button" data-action="save">💾 保存</button>
+          </div>
+        </section>
+
+        <section class="preview-stack">
+          <header class="panel top-bar">
+            <div class="clock-text" data-role="clock">🕐 --</div>
+          </header>
+          <section class="panel current-subject transition-soft">
+            <div class="current-subject-label">📚 現在考試科目</div>
+            <div class="current-subject-name blink-soft" data-role="current-subject">尚未設定科目</div>
+          </section>
+          <section class="panel schedule">
+            <h2 class="section-title">🗓️ 考程表</h2>
+            <div class="schedule-list" data-role="schedule"></div>
+          </section>
+          <section class="panel statistics">
+            <h2 class="section-title">👥 考場人數統計</h2>
+            <div class="stats-grid" data-role="statistics"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
